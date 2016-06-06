@@ -11,6 +11,8 @@ import android.os.Message;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
+import android.webkit.CookieManager;
+import android.webkit.CookieSyncManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
@@ -32,7 +34,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     public static final int INPUT_FILE_REQUEST_CODE = 1;
-    public static final String EXTRA_FROM_NOTIFICATION = "EXTRA_FROM_NOTIFICATION";
 
     private ValueCallback<Uri[]> mFilePathCallback;
     private String mCameraPhotoPath;
@@ -51,6 +52,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         webView = new WebView(this);
         webView.getSettings().setJavaScriptEnabled(true);
+        CookieSyncManager.createInstance(this);
+        CookieManager cookieManager = CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -61,13 +67,20 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 // TODO Auto-generated method stub
+
                 view.loadUrl(url);
                 return true;
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                // TODO Auto-generated method stub
+                CookieManager cookieManager = CookieManager.getInstance();
+                String CookieStr = cookieManager.getCookie(url);
+                if (CookieStr != null) {
+                    LogUtils.i("url===" + url +"----加载的cookie为====>" + CookieStr);
+                    SharePreferenceUtils.put(MainActivity.this, "cookie", CookieStr);
+                }
+
                 super.onPageFinished(view, url);
             }
 
@@ -130,7 +143,11 @@ public class MainActivity extends AppCompatActivity {
 
         });
         webView.loadUrl("http://m.jinianbishequ.com");
-
+        if (SharePreferenceUtils.get(MainActivity.this, "cookie", "") != null){
+            String cookie = (String) SharePreferenceUtils.get(MainActivity.this, "cookie", "");
+            cookieManager.setCookie("http://m.jinianbishequ.com", cookie);//cookies是在HttpClient中获得的cookie
+            CookieSyncManager.getInstance().sync();
+        }
         setContentView(webView);
 
     }
